@@ -2,21 +2,18 @@ from setuptools import setup, find_packages
 
 setup(
     name="KeyisBLogging",
-    version="1.0.2",
+    version="1.0.3",
     author="KeyisB",
     author_email="keyisb.pip@gmail.com",
     description="KeyisBLogging",
     long_description='',
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/my_library",  # Ссылка на репозиторий
+    url="https://github.com/KeyisB/libs/tree/main/KeyisBLogging",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
-    install_requires=[
-        # "requests", "numpy"  # Добавьте зависимости, если есть
-    ],
+    python_requires='>=3.12',
+    license="MMB License v1.0"
 )
