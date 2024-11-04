@@ -1,5 +1,0 @@
-LICENSE
-KeyisBLogging.egg-info/PKG-INFO
-KeyisBLogging.egg-info/SOURCES.txt
-KeyisBLogging.egg-info/dependency_links.txt
-KeyisBLogging.egg-info/top_level.txt
