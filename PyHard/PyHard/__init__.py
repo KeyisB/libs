@@ -1,5 +1,5 @@
 """
-MMBP 
+PyHard
 ************
 
 *created by KeyisB*
@@ -30,5 +30,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 __version__ = '0.0.0.0.8'
-__KeyisBPythonEingineVersion__ = '1.3.1.0.23'
+__KeyisBPythonEngineVersion__ = '1.3.1.0.23'
+
+from .core import Url, _EventTarget, LocalVault
+from .models import *
 

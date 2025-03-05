@@ -1,6 +1,6 @@
 """
 GW Client
-************
+~~~~~~~~~
 
  - mmbp
 
@@ -43,19 +43,39 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 __GW_VERSION__ = "0.0.0.0.4"
-__version__ = "1.4.0.0.8"
+__version__ = "1.4.0.1.25"
 
 __all__ = [
+    "AsyncClient",
     "Client",
-    "Exceptions"
-
+    "ProtocolsManager",
+    "Url",
+    "DNS",
+    "DNSObject",
+    "Exceptions",
+    "Request",
+    "Response",
+    "ssl_gw_crt_path"
 ]
 
-
-from .Client import Client
+from .core import (
+    Url,
+    DNS,
+    DNSObject,
+    ProtocolsManager
+    )
+from .Clients import AsyncClient, Client
+from .models import Request, Response
 from .Exceptions import Exceptions
+from .dnsCore import ssl_gw_crt_path
 
 
 
 
+import KeyisBClient_httpx as httpx
+ProtocolsManager.addClient(httpx.Client()) # type: ignore
 
+import KeyisBClient_mmbp as mmbp
+ProtocolsManager.addClient(mmbp.Client()) # type: ignore
+
+from .gw_certs import *

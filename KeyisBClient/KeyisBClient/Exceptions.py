@@ -33,6 +33,10 @@ class Exceptions:
         """Некорректный ответ от сервера."""
         def __init__(self, message="Некорректный ответ от сервера"):
             super().__init__(message)
+    class CertificateVerifyFailed(Exception):
+        """[SSL: CERTIFICATE_VERIFY_FAILED]"""
+        def __init__(self, message="[SSL: CERTIFICATE_VERIFY_FAILED]"):
+            super().__init__(message)
     class DNS:
         class ErrorConnection(Exception):
             """Ошибка подключения к DNS-серверу."""

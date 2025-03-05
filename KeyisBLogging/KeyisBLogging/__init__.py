@@ -171,7 +171,10 @@ class __Log:
         """
         self.__log_listener.append(listener)
     def removeLogListener(self, listener: Callable) -> None:
-        self.__log_listener.remove(listener)
+        if listener in self.__log_listener:
+            self.__log_listener.remove(listener)
+        else:
+            logging.error(f'Слушатель логов -> [{listener}] не найден')
 
     def setLogFormat(self, config: str) -> None:
         """

@@ -1,118 +1,135 @@
 
 import re
-from typing import Optional, List, Literal
+import os
+import typing as _typing
+from typing import Optional, List, Literal, Any, Dict, Union, Mapping
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
+import httpx
+from KeyisBLogging import logging
+
+from .models import Url, DNSObject, Request, Response, ClientObject
 
 
-class Url:
-    def __init__(self, url_str: Optional[str] = None):
-        self.interpreter: Optional[str] = None
-        self.scheme: str = None # type: ignore
-        self.hostname: str = None # type: ignore
-        self.path: str = None # type: ignore
-        self.query: str = None # type: ignore
-        self.fragment: str = None # type: ignore
-        self.params: dict = None # type: ignore
+class __DNS:
+    async def getHostAsync(self, domain: str) -> Optional[str]:
+        """
+        Получение DNS-адреса из сети DNS GW
 
-        if url_str:
-            self.setUrl(url_str)
-        
-        
-
-    def __parse_url(self, url_str: str):
-        pattern = r"^(?P<interpreter>[A-Za-z0-9_]+):(?P<rest>[A-Za-z0-9_]+://.+)$"
-        match = re.match(pattern, url_str)
-        
-        if match:
-            interpreter = match.group("interpreter")
-            rest_url = match.group("rest")
-        else:
-            interpreter = None
-            rest_url = url_str
-    
-        parsed_url = urllib.parse.urlparse(rest_url)
-
-
-        self.interpreter = interpreter
-        self.scheme = parsed_url.scheme if parsed_url.scheme != '' else None # type: ignore
-
-        self.hostname = parsed_url.netloc if parsed_url.netloc != '' else None # type: ignore
-        self.path = parsed_url.path
-        self.query = parsed_url.query
-        self.fragment = parsed_url.fragment
-        self.params = self.__parse_params(parsed_url.query)
-
-    def __parse_params(self, query_str: str) -> dict:
-
-        parsed = urllib.parse.parse_qs(query_str)
-        cleaned = {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}
-        return cleaned
-
-    def __str__(self):
-        return self.getUrl()
-    def setUrl(self, url_str: str):
-        if url_str == '':
-            url_str = '/'
-        
-        self.__parse_url(url_str)
-        
-
-    def getUrl(self, parts: List[Literal['interpreter', 'scheme', 'hostname', 'path', 'params', 'fragment']] = ['scheme', 'hostname', 'path', 'params', 'fragment']) -> str:
-        scheme = self.scheme if'scheme' in parts else ''
-        hostname = self.hostname if 'hostname' in parts else ''
-        params = urllib.parse.urlencode(self.params, doseq=True) if 'params' in parts else ''
-        path = self.path if 'path' in parts else ''
-        fragment = self.fragment if 'fragment' in parts else ''
-
-        if scheme is None: scheme = ''
-        if hostname is None: hostname = ''
+        :param domain: 
+        """
+        dnsObject = DNSObject(domain)
+        await dnsObject.requestAsync()
+        return dnsObject.host()
+DNS = __DNS()
 
 
 
-        url = urllib.parse.urlunparse((
-            scheme, hostname, path, '', params, fragment
-        ))
-        url = f'{self.interpreter}:{url}' if 'interpreter' in parts and self.interpreter is not None else url
+class __ProtocolsManager:
+    def __init__(self):
+        self.cores: Dict[str, Dict[str, Union[str, ClientObject]]] = {}
+    async def requestAsync(self, request: Request) -> Response:
+        scheme = request.url.scheme
 
+        if scheme not in self.cores:
+            logging.error(f'Unknown scheme: {scheme} in request {request.url}!')
+            return Response(-1) # Unknown scheme
 
-        if 'path' not in parts:
-            if url.endswith(':'):
-                url = url[:-1]
-
-        if 'scheme' not in parts:
-            if url.startswith('//'):
-                url = url[2:]
-
-        
-        return url
-    def isSchemeSecure(self) -> bool:
-        return self.scheme in ('https', 'mmbps')
-    
-    def getDafaultUrl(self) -> 'Url':
-        _url = Url(self.getUrl())
-
-
-        if _url.scheme in ('mmbp', 'mmbps'):
-            with ThreadPoolExecutor() as executor:
-                future = executor.submit(self.__run_asyncio_task_fetch_sync__, _url.hostname)
-                result = future.result()
-                _url.hostname = result
-        if _url.scheme == 'mmbps': _url.scheme = 'https'
-
-        return _url
-
-        
+        if scheme.startswith('gw') or scheme.startswith('mmb'): # Если протокол mmb, то это сразу внутреняя dns система
             
+            dnsObject = DNSObject(request.url.hostname)
+            await dnsObject.requestAsync() # получаем DNS-запись о сервере
 
-    def __run_asyncio_task_fetch_sync__(self, hostname):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            import KeyisBClient
-            result = loop.run_until_complete(KeyisBClient.Client.getDNS(hostname))
-        finally:
-            loop.close()
-        return result
+            protocolInfo = dnsObject.protocolInfo()
+
+            protocolVersion = protocolInfo.get('version', '$last')
+            request.dnsObject = dnsObject
+        else:
+            protocolVersion = '$default'
+
+            
+        if protocolVersion.startswith('$'):
+            protocolVersion: str = self.cores[scheme][protocolVersion] # type: ignore
+        
+        
+        client: ClientObject  = self.cores[scheme][protocolVersion] # type: ignore
+        return await client.requestAsync(request)
+    def requestSync(self, request: Request) -> Response:
+        scheme = request.url.scheme
+
+        if scheme not in self.cores:
+            logging.error(f'Unknown scheme: {scheme} in request {request.url}!')
+            return Response(-1) # Unknown scheme
+
+        if scheme.startswith('gw') or scheme.startswith('mmb'): # Если протокол mmb, то это сразу внутреняя dns система
+            
+            dnsObject = DNSObject(request.url.hostname)
+            dnsObject.request() # получаем DNS-запись о сервере
+
+            protocolInfo = dnsObject.protocolInfo()
+
+            protocolVersion = protocolInfo.get('version', '$last')
+            request.dnsObject = dnsObject
+        else:
+            protocolVersion = '$default'
+
+            
+        if protocolVersion.startswith('$'):
+            protocolVersion: str = self.cores[scheme][protocolVersion] # type: ignore
+        
+        
+        client: ClientObject  = self.cores[scheme][protocolVersion] # type: ignore
+        return client.requestSync(request)
+    
+    def addClient(self, client: ClientObject):
+        for scheme, versions in client.protocols.items():
+            self.cores[scheme] = {}
+
+            for version in versions['versions']:
+                self.cores[scheme][version] = client
+            
+            if 'last' in versions:
+                self.cores[scheme]['$last'] = versions['last']
+            else:
+                self.cores[scheme]['$last'] = versions['versions'][-1]
+
+            if 'default' in versions:
+                self.cores[scheme]['$default'] = versions['default']
+            else:
+                self.cores[scheme]['$default'] = versions['versions'][-1]
+
+    async def streamAsync(self, request: Request) -> _typing.AsyncIterator[Response]:
+        scheme = request.url.scheme
+
+        if scheme not in self.cores:
+            logging.error(f'Unknown scheme: {scheme} in request {request.url}!')
+            yield Response(-1) # Unknown scheme
+
+        if scheme.startswith('gw') or scheme.startswith('mmb'): # Если протокол mmb, то это сразу внутреняя dns система
+            
+            dnsObject = DNSObject(request.url.hostname)
+            await dnsObject.requestAsync() # получаем DNS-запись о сервере
+
+            protocolInfo = dnsObject.protocolInfo()
+
+            protocolVersion = protocolInfo.get('version', '$last')
+            request.dnsObject = dnsObject
+        else:
+            protocolVersion = '$default'
+
+            
+        if protocolVersion.startswith('$'):
+            protocolVersion: str = self.cores[scheme][protocolVersion] # type: ignore
+        
+        
+        client: ClientObject  = self.cores[scheme][protocolVersion] # type: ignore
+
+        
+
+        async for response in await client.streamAsync(request):
+            yield response
+
+ProtocolsManager = __ProtocolsManager()
+
 

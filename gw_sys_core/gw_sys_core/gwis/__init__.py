@@ -1,3 +1,16 @@
+"""
+GW core
+*******
+
+`gw-sys-core`
+
+*created by KeyisB*
+
+-==============================-
+
+
+
+
 Copyright (C) 2024 KeyisB. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person
@@ -26,3 +39,15 @@ CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
+"""
+
+__all__ = [
+    'IDConverter',
+    'IDTypes',
+    'TYPES',
+    'Exceptions'
+]
+
+
+from .Exceptions import Exceptions
+from .ids import IDConverter, IDTypes, TYPES
